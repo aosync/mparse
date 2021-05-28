@@ -183,7 +183,8 @@ parse_call(int *val)
 	} else if(strcmp(ident, "ln") == 0){
 		*val = (int)log((double)arg);
 	} else{
-		*val = 0;
+		printf("error: no such function %s\n", ident);
+		exit(1);
 	}
 	return 0;
 }
