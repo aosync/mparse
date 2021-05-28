@@ -3,17 +3,20 @@
 #include <string.h>
 #include <math.h>
 
+unsigned vars[256];
+
 unsigned sp = 0;
-char *src = "10*sqrt(16*(32-16))";
+char *src = "ab=4";
 
 void next();
 void
 next()
 {
 	if(src[sp] == '\0') return;
-	if(src[++sp] == '\0'){
+	sp++;
+	/*if(src[++sp] == '\0'){
 		printf("note: eof reached\n");
-	}
+	}*/
 }
 
 char expect(char c);
@@ -29,6 +32,7 @@ expect(char c)
 
 char parse_root(int *val);
 char parse_expr(int *val);
+char parse_assign(int *val);
 char parse_paren(int *val);
 char parse_sum(int *val);
 char parse_mul(int *val);
@@ -37,6 +41,7 @@ char parse_number(int *val);
 char parse_nnumber(int *val);
 char parse_call(int *val);
 char parse_identifier(char *ident);
+char parse_var(int *val);
 
 char
 parse_root(int *val)
@@ -47,11 +52,31 @@ parse_root(int *val)
 char
 parse_expr(int *val)
 {
-	char rc;
-	
+	if(!parse_assign(val)) return 0;
 	if(!parse_sum(val)) return 0;
 	
 	return 1;
+}
+
+char
+parse_assign(int *val)
+{
+	unsigned bsp = sp; // need to save sp because it can fail gracefully after having parsed
+	char ident[256];
+	if(parse_identifier(ident)) return 1;
+	if(expect('=')) {
+		sp = bsp;
+		return 1;
+	}
+	if(parse_expr(val)){
+		printf("error: expected expr\n");
+		exit(1);
+	}
+	unsigned char hash = 0;
+	for(unsigned i = 0; ident[i]; i++)
+		hash += 128*(ident[i]);
+	vars[hash] = *val;
+	return 0;
 }
 
 /* note: there are 2 types of parsing issues:
@@ -65,7 +90,7 @@ parse_paren(int *val)
 	if(expect('(')) return 1;
 	rc = parse_expr(val);
 	if(expect(')')){
-	printf("%s\n", src + sp);
+		printf("%s\n", src + sp);
 		printf("error: expected )");
 		exit(1);
 	}
@@ -129,6 +154,7 @@ parse_term(int *val)
 	if(!parse_nnumber(val)) return 0;
 	if(!parse_paren(val)) return 0;
 	if(!parse_call(val)) return 0;
+	if(!parse_var(val)) return 0;
 	
 	return 1;
 }
@@ -171,12 +197,13 @@ parse_nnumber(int *val)
 char
 parse_call(int *val)
 {
+	unsigned bsp = sp; // same thing here
 	int arg;
 	char ident[256];
 	if(parse_identifier(ident)) return 1;
 	if(parse_paren(&arg)){
-		printf("error: missing arg (paren)\n");
-		exit(1);
+		sp = bsp;
+		return 1;
 	}
 	if(strcmp(ident, "sqrt") == 0){
 		*val = (int)sqrt((double)arg);
@@ -203,11 +230,31 @@ parse_identifier(char *ident)
 	ident[count] = '\0';
 	return 0;
 }
-	
+
+char
+parse_var(int *val)
+{
+	char ident[256];
+	if(parse_identifier(ident)) return 1;
+	unsigned char hash = 0;
+	for(unsigned i = 0; ident[i]; i++)
+		hash += 128*ident[i];
+	*val = vars[hash];
+	return 0;
+}
 
 int
 main()
 {
+	char str[256];
+	while(1){
+		int r = 0;
+		scanf("%s", str);
+		src = str;
+		sp = 0;
+		parse_root(&r);
+		printf("%d\n", r);
+	}
 	int r;
 	parse_root(&r);
 	printf("expression: %s\n", src);
