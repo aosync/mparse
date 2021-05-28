@@ -1,8 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+#include <math.h>
 
 unsigned sp = 0;
-char *src = "(-((4)*((5+15)/2)))";
+char *src = "10*sqrt(16*(32-16))";
 
 void next();
 void
@@ -33,6 +35,8 @@ char parse_mul(int *val);
 char parse_term(int *val);
 char parse_number(int *val);
 char parse_nnumber(int *val);
+char parse_call(int *val);
+char parse_identifier(char *ident);
 
 char
 parse_root(int *val)
@@ -124,6 +128,7 @@ parse_term(int *val)
 	if(!parse_number(val)) return 0;
 	if(!parse_nnumber(val)) return 0;
 	if(!parse_paren(val)) return 0;
+	if(!parse_call(val)) return 0;
 	
 	return 1;
 }
@@ -163,10 +168,47 @@ parse_nnumber(int *val)
 	return 0;
 }
 
+char
+parse_call(int *val)
+{
+	int arg;
+	char ident[256];
+	if(parse_identifier(ident)) return 1;
+	if(parse_paren(&arg)){
+		printf("error: missing arg (paren)\n");
+		exit(1);
+	}
+	if(strcmp(ident, "sqrt") == 0){
+		*val = (int)sqrt((double)arg);
+	} else if(strcmp(ident, "ln") == 0){
+		*val = (int)log((double)arg);
+	} else{
+		*val = 0;
+	}
+	return 0;
+}
+
+char
+parse_identifier(char *ident)
+{
+	if((src[sp] < 'a' || src[sp] > 'z') && (src[sp] > 'A' || src[sp] < 'Z')) return 1;
+	char *start = src + sp;
+	unsigned count = 0;
+	while((src[sp] >= 'a' && src[sp] <= 'z') || (src[sp] >= 'A' && src[sp] <= 'Z')){
+		count++;
+		next();
+	}
+	memcpy(ident, start, count);
+	ident[count] = '\0';
+	return 0;
+}
+	
+
 int
 main()
 {
 	int r;
 	parse_root(&r);
-	printf("%d\n", r);
+	printf("expression: %s\n", src);
+	printf("answer: %d\n", r);
 }
