@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 unsigned sp = 0;
-char *src = "(4*(4+2))";
+char *src = "(-((4)*((5+15)/2)))";
 
 void next();
 void
@@ -32,6 +32,7 @@ char parse_sum(int *val);
 char parse_mul(int *val);
 char parse_term(int *val);
 char parse_number(int *val);
+char parse_nnumber(int *val);
 
 char
 parse_root(int *val)
@@ -43,8 +44,6 @@ char
 parse_expr(int *val)
 {
 	char rc;
-	
-	if(!parse_paren(val)) return 0;
 	
 	if(!parse_sum(val)) return 0;
 	
@@ -62,6 +61,7 @@ parse_paren(int *val)
 	if(expect('(')) return 1;
 	rc = parse_expr(val);
 	if(expect(')')){
+	printf("%s\n", src + sp);
 		printf("error: expected )");
 		exit(1);
 	}
@@ -81,6 +81,14 @@ parse_sum(int *val)
 		*val = r1 + r2;
 		return 0;
 	}
+	if(!expect('-')){
+		if(parse_sum(&r2)){
+			printf("error: expected sum");
+			exit(1);
+		}
+		*val = r1 - r2;
+		return 0;
+	}
 	*val = r1;
 	return 0;
 }
@@ -98,6 +106,14 @@ parse_mul(int *val)
 		*val = r1 * r2;
 		return 0;
 	}
+	if(!expect('/')){
+		if(parse_mul(&r2)){
+			printf("error: expected mul");
+			exit(1);
+		}
+		*val = r1 / r2;
+		return 0;
+	}
 	*val = r1;
 	return 0;
 }
@@ -106,6 +122,7 @@ char
 parse_term(int *val)
 {
 	if(!parse_number(val)) return 0;
+	if(!parse_nnumber(val)) return 0;
 	if(!parse_paren(val)) return 0;
 	
 	return 1;
@@ -130,6 +147,19 @@ parse_number(int *val)
 	}
 	sp = bsp;
 	*val = r;
+	return 0;
+}
+
+char
+parse_nnumber(int *val)
+{
+	if(expect('-')) return 1;
+	int r;
+	if(parse_term(&r)){
+		printf("error: expected term\n");
+		exit(1);
+	}
+	*val = -r;
 	return 0;
 }
 
